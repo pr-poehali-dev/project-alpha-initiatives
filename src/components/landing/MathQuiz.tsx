@@ -6,41 +6,80 @@ import Icon from "@/components/ui/icon"
 const TOTAL_TIME = 30
 const TOTAL_QUESTIONS = 10
 
-function generateQuestion() {
-  const ops = ['+', '-', '×'] as const
-  const op = ops[Math.floor(Math.random() * ops.length)]
-  let a: number, b: number, answer: number
+type Difficulty = 'easy' | 'medium' | 'hard'
 
-  if (op === '+') {
-    a = Math.floor(Math.random() * 50) + 1
-    b = Math.floor(Math.random() * 50) + 1
-    answer = a + b
-  } else if (op === '-') {
-    a = Math.floor(Math.random() * 50) + 10
-    b = Math.floor(Math.random() * a) + 1
-    answer = a - b
+const DIFFICULTIES: { key: Difficulty; label: string; desc: string; color: string }[] = [
+  { key: 'easy',   label: '🟢 Лёгкий',   desc: '+, − до 20',         color: 'border-green-500 text-green-400 bg-green-500/10' },
+  { key: 'medium', label: '🟡 Средний',  desc: '+, −, × до 50',      color: 'border-yellow-500 text-yellow-400 bg-yellow-500/10' },
+  { key: 'hard',   label: '🔴 Сложный',  desc: '×, ÷, двузначные',   color: 'border-red-500 text-red-400 bg-red-500/10' },
+]
+
+function generateQuestion(difficulty: Difficulty) {
+  let a: number, b: number, answer: number, question: string
+
+  if (difficulty === 'easy') {
+    const ops = ['+', '-'] as const
+    const op = ops[Math.floor(Math.random() * ops.length)]
+    if (op === '+') {
+      a = Math.floor(Math.random() * 10) + 1
+      b = Math.floor(Math.random() * 10) + 1
+      answer = a + b
+    } else {
+      a = Math.floor(Math.random() * 10) + 10
+      b = Math.floor(Math.random() * a) + 1
+      answer = a - b
+    }
+    question = `${a} ${op} ${b} = ?`
+  } else if (difficulty === 'medium') {
+    const ops = ['+', '-', '×'] as const
+    const op = ops[Math.floor(Math.random() * ops.length)]
+    if (op === '+') {
+      a = Math.floor(Math.random() * 50) + 1
+      b = Math.floor(Math.random() * 50) + 1
+      answer = a + b
+    } else if (op === '-') {
+      a = Math.floor(Math.random() * 50) + 10
+      b = Math.floor(Math.random() * a) + 1
+      answer = a - b
+    } else {
+      a = Math.floor(Math.random() * 9) + 2
+      b = Math.floor(Math.random() * 9) + 2
+      answer = a * b
+    }
+    question = `${a} ${op} ${b} = ?`
   } else {
-    a = Math.floor(Math.random() * 9) + 2
-    b = Math.floor(Math.random() * 9) + 2
-    answer = a * b
+    const ops = ['×', '÷'] as const
+    const op = ops[Math.floor(Math.random() * ops.length)]
+    if (op === '×') {
+      a = Math.floor(Math.random() * 12) + 3
+      b = Math.floor(Math.random() * 12) + 3
+      answer = a * b
+      question = `${a} × ${b} = ?`
+    } else {
+      b = Math.floor(Math.random() * 11) + 2
+      answer = Math.floor(Math.random() * 11) + 2
+      a = b * answer
+      question = `${a} ÷ ${b} = ?`
+    }
   }
 
   const wrong = new Set<number>()
   while (wrong.size < 3) {
-    const delta = Math.floor(Math.random() * 10) + 1
+    const delta = Math.floor(Math.random() * (difficulty === 'hard' ? 15 : 10)) + 1
     const w = Math.random() > 0.5 ? answer + delta : answer - delta
     if (w !== answer && w > 0) wrong.add(w)
   }
 
   const options = [...wrong, answer].sort(() => Math.random() - 0.5)
-  return { question: `${a} ${op} ${b} = ?`, answer, options }
+  return { question, answer, options }
 }
 
 type Phase = 'idle' | 'playing' | 'result'
 
 export default function MathQuiz() {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [questions] = useState(() => Array.from({ length: TOTAL_QUESTIONS }, generateQuestion))
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
+  const [questions, setQuestions] = useState(() => Array.from({ length: TOTAL_QUESTIONS }, () => generateQuestion('medium')))
   const [current, setCurrent] = useState(0)
   const [correct, setCorrect] = useState(0)
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME)
@@ -57,6 +96,7 @@ export default function MathQuiz() {
   }, [phase, timeLeft, finish])
 
   const handleStart = () => {
+    setQuestions(Array.from({ length: TOTAL_QUESTIONS }, () => generateQuestion(difficulty)))
     setPhase('playing')
     setCurrent(0)
     setCorrect(0)
@@ -93,20 +133,35 @@ export default function MathQuiz() {
 
   const timerPercent = (timeLeft / TOTAL_TIME) * 100
   const q = questions[current]
+  const activeDiff = DIFFICULTIES.find(d => d.key === difficulty)!
 
   return (
     <div className="mt-10 w-full max-w-md">
       <AnimatePresence mode="wait">
         {phase === 'idle' && (
-          <motion.div key="idle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <p className="text-neutral-400 mb-4 text-lg">10 примеров за 30 секунд — проверь свою скорость и точность!</p>
+          <motion.div key="idle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-5">
+            <p className="text-neutral-400 text-lg">10 примеров за 30 секунд — выбери уровень и проверь себя!</p>
+            <div className="flex flex-col gap-2">
+              {DIFFICULTIES.map(d => (
+                <button
+                  key={d.key}
+                  onClick={() => setDifficulty(d.key)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left ${
+                    difficulty === d.key ? d.color : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
+                  }`}
+                >
+                  <span className="font-semibold">{d.label}</span>
+                  <span className="text-sm opacity-70">{d.desc}</span>
+                </button>
+              ))}
+            </div>
             <Button
               size="lg"
               onClick={handleStart}
-              className="bg-[#FF4D00] text-white hover:bg-[#e04400] border-none"
+              className="bg-[#FF4D00] text-white hover:bg-[#e04400] border-none w-full"
             >
               <Icon name="Zap" size={18} className="mr-2" />
-              Попробовать мини-тест
+              Начать тест
             </Button>
           </motion.div>
         )}
@@ -114,7 +169,7 @@ export default function MathQuiz() {
         {phase === 'playing' && (
           <motion.div key="playing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-5">
             <div className="flex items-center justify-between text-sm text-neutral-400 mb-1">
-              <span>Вопрос {current + 1} / {TOTAL_QUESTIONS}</span>
+              <span>Вопрос {current + 1} / {TOTAL_QUESTIONS} · <span className={activeDiff.color.split(' ')[1]}>{activeDiff.label}</span></span>
               <span className={timeLeft <= 10 ? 'text-red-400 font-bold' : ''}>⏱ {timeLeft} сек</span>
             </div>
             <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
@@ -176,7 +231,7 @@ export default function MathQuiz() {
             <Button
               size="lg"
               variant="ghost"
-              onClick={handleStart}
+              onClick={() => setPhase('idle')}
               className="text-neutral-400 hover:text-white mt-2"
             >
               <Icon name="RefreshCw" size={16} className="mr-2" />
