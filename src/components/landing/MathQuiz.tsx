@@ -173,14 +173,24 @@ export default function MathQuiz() {
                 <p className="text-neutral-400 text-sm mt-1">Правильно</p>
               </div>
             </div>
-            <Button
-              size="lg"
-              onClick={handleStart}
-              className="bg-[#FF4D00] text-white hover:bg-[#e04400] border-none mt-2"
-            >
-              <Icon name="RefreshCw" size={16} className="mr-2" />
-              Попробовать снова
-            </Button>
+            <div className="flex flex-wrap gap-3 mt-2">
+              <Button
+                size="lg"
+                className="bg-[#FF4D00] text-white hover:bg-[#e04400] border-none"
+              >
+                <Icon name="UserPlus" size={16} className="mr-2" />
+                Зарегистрироваться бесплатно
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                onClick={handleStart}
+                className="text-neutral-400 hover:text-white"
+              >
+                <Icon name="RefreshCw" size={16} className="mr-2" />
+                Ещё раз
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
