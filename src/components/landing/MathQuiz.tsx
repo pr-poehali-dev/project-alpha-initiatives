@@ -131,6 +131,21 @@ export default function MathQuiz() {
     return { label: '📚 Нужно потренироваться', color: 'text-neutral-400' }
   }
 
+  const getNextLevelHint = () => {
+    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0
+    if (difficulty === 'easy' && accuracy >= 80)
+      return { text: 'Отлично справляешься! Попробуй средний уровень', next: 'medium' as Difficulty }
+    if (difficulty === 'medium' && accuracy >= 80)
+      return { text: 'Впечатляет! Готов к сложному уровню?', next: 'hard' as Difficulty }
+    if (difficulty === 'hard' && accuracy >= 80)
+      return { text: 'Ты настоящий профи! Попробуй побить свой рекорд', next: 'hard' as Difficulty }
+    if (difficulty === 'hard' && accuracy < 80)
+      return { text: 'Сложновато? Потренируйся на среднем уровне', next: 'medium' as Difficulty }
+    if (difficulty === 'medium' && accuracy < 60)
+      return { text: 'Начни с лёгкого — закрепи основы', next: 'easy' as Difficulty }
+    return null
+  }
+
   const timerPercent = (timeLeft / TOTAL_TIME) * 100
   const q = questions[current]
   const activeDiff = DIFFICULTIES.find(d => d.key === difficulty)!
@@ -228,6 +243,22 @@ export default function MathQuiz() {
                 <p className="text-neutral-400 text-sm mt-1">Правильно</p>
               </div>
             </div>
+            {getNextLevelHint() && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-center justify-between bg-neutral-800 rounded-xl px-4 py-3 gap-3"
+              >
+                <p className="text-sm text-neutral-300">{getNextLevelHint()!.text}</p>
+                <button
+                  onClick={() => { setDifficulty(getNextLevelHint()!.next); setPhase('idle') }}
+                  className="text-[#FF4D00] text-sm font-semibold whitespace-nowrap hover:underline"
+                >
+                  Попробовать →
+                </button>
+              </motion.div>
+            )}
             <Button
               size="lg"
               variant="ghost"
